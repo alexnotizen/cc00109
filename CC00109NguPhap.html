@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BÀI 9 – NGỮ PHÁP - Flashcard</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; font-family: Arial, "Microsoft YaHei", sans-serif;
+  background: #fdfbf7;
+  display: flex; justify-content: center; color: #202124;
+}
+.app { width: min(874px, 98vw); padding: 20px 0 30px; }
+h1 { text-align: center; margin: 0 0 10px; font-size: 32px; font-weight: bold; }
+.progress { text-align: center; font-size: 18px; color: #444; margin-bottom: 15px; font-weight: bold; }
+.card-wrap { perspective: 1200px; cursor: pointer; }
+.card {
+  width: 100%; height: 640px; position: relative; transform-style: preserve-3d;
+  transition: transform .55s ease;
+}
+.card.flipped { transform: rotateY(180deg); }
+.face {
+  position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 24px; background: white; box-shadow: 0 15px 45px rgba(0,0,0,.15);
+  display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+  padding: 30px; border: 3px solid #eee; overflow-y: auto;
+}
+.front { text-align: center; }
+.back { transform: rotateY(180deg); text-align: left; align-items: flex-start; }
+
+.hl-blue { color: #ffffff; font-weight: bold; background-color: #2563eb; padding: 2px 6px; border-radius: 4px; }
+.hl-blue-text { color: #2563eb; font-weight: bold; font-size: 1.2em; }
+.hl-red { color: #dc2626; font-weight: bold; }
+.pinyin { font-size: 1.584em; color: #555; margin-bottom: 10px; font-weight: 500; text-align: center; }
+
+.zh-front { font-size: 2.16em; font-weight: bold; margin-bottom: 8px; line-height: 1.3; color: #dc2626; text-align: center; width: 100%; }
+.zh-back { color: #2563eb; font-weight: bold; font-size: 1.32em; }
+
+.desc { font-size: 1.26em; color: #333; margin: 8px 0; text-align: left; width: 100%; line-height: 1.4; }
+.front .desc { font-size: 1.512em; text-align: left; }
+.controls { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+button {
+  border: 0; border-radius: 20px; padding: 15px 28px; font-size: 18px;
+  cursor: pointer; background: #e9eef7; color: #233044; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,.1);
+}
+button.primary { background: #2563eb; color: white; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>BÀI 9 – NGỮ PHÁP</h1>
+  <div class="progress" id="progress"></div>
+  <div class="card-wrap" id="cardWrap" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="face front" id="frontFace"></div>
+      <div class="face back" id="backFace"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button onclick="event.stopPropagation();prevCard()">← TRƯỚC</button>
+    <button class="primary" onclick="event.stopPropagation();flipCard()">LẬT THẺ</button>
+    <button onclick="event.stopPropagation();nextCard()">TIẾP →</button>
+  </div>
+</div>
+<script>
+const cards = [
+  {
+    f: "<div class='zh-front'>THỜI ĐIỂM VÀ THỜI LƯỢNG</div>" +
+       "<div class='desc'>" +
+       "Có hai loại từ chỉ thời gian khác nhau:<br>" +
+       "<b>Một là thời điểm</b>, tức là mốc thời gian cụ thể (Khi nào? Lúc nào?)<br> Ví dụ: <span class='hl-red'>明天, 下個星期, 下個禮拜, 上個月, 三點</span><br>" +
+       "<b>Hai là thời lượng</b>, tức là khoảng thời gian kéo dài bao lâu. <br>Ví dụ: <span class='hl-red'>兩天, 三個月, 一個星期, 半個小時</span><br><br>" +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>2013年, 2014年, 2015年...</span> là thời điểm<br>" +
+       "<span class='zh-back'>一年, 兩年, 三年, 半年, 一年半</span> là thời lượng<br><br>" +
+       "<span class='zh-back'>一月, 二月...</span> là thời điểm<br>" +
+       "<span class='zh-back'>一個月, 兩個月, 半個月, 一個半月</span> là thời lượng<br><br>" +
+       "<span class='zh-back'>星期一</span> là thời điểm<br>" +
+       "<span class='zh-back'>一個星期, 兩個星期...</span> là thời lượng<br><br>" +
+       "<span class='zh-back'>1日, 2號...</span> là thời điểm<br>" +
+       "<span class='zh-back'>一天, 兩天, 半天, 一天半</span> là thời lượng<br><br>" +
+       "<span class='zh-back'>一點（鐘）</span>1 giờ<br>" +
+       "<span class='zh-back'>兩點（鐘）</span>2 giờ<br>" +
+       "<span class='zh-back'>一個小時  </span>1 tiếng đồng hồ<br><br>" +
+       "<span class='zh-back'>兩個小時  </span>2 tiếng<br>" +
+       "<span class='zh-back'>半個小時  </span>nửa giờ<br>" +
+       "<span class='zh-back'>六個半鐘頭  </span>6 tiếng rưỡi<br><br>" +
+       "<b>A:</b> <span class='zh-back'>他決定什麼時候到日本去玩？</span><br><span style='font-weight: bold; color: #555;'>Tā juédìng shénme shíhòu dào Rìběn qù wán?</span><br>Anh ấy quyết định đi Nhật chơi khi nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>下個月。</span><br><span style='font-weight: bold; color: #555;'>Xià ge yuè.</span><br>Tháng sau.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你打算學多久（的）中文？</span><br><span style='font-weight: bold; color: #555;'>Nǐ dǎsuàn xué duōjiǔ (de) zhōngwén?</span><br>Cậu dự định học tiếng Trung bao lâu?<br>" +
+       "<b>B:</b> <span class='zh-back'>五年。</span><br><span style='font-weight: bold; color: #555;'>Wǔ nián.</span><br>Năm năm.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你什麼時候回國？</span><br><span style='font-weight: bold; color: #555;'>Nǐ shénme shíhòu huíguó?</span><br>Cậu về nước khi nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>下個星期二。</span><br><span style='font-weight: bold; color: #555;'>Xià ge xīngqí èr.</span><br>Thứ Ba tuần sau.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你什麼時候去臺東？</span><br><span style='font-weight: bold; color: #555;'>Nǐ shénme shíhòu qù Táidōng?</span><br>Cậu đi Đài Đông khi nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>我這個星期六去。</span><br><span style='font-weight: bold; color: #555;'>Wǒ zhè ge xīngqíliù qù.</span><br>Tôi đi thứ Bảy tuần này.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你去臺東玩多久？</span><br><span style='font-weight: bold; color: #555;'>Nǐ qù Táidōng wán duōjiǔ?</span><br>Cậu đi Đài Đông chơi bao lâu?<br>" +
+       "<b>B:</b> <span class='zh-back'>我去玩五天。</span><br><span style='font-weight: bold; color: #555;'>Wǒ qù wán wǔ tiān.</span><br>Tôi đi chơi năm ngày.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>他什麼時候回國？</span><br><span style='font-weight: bold; color: #555;'>Tā shénme shíhòu huíguó?</span><br>Anh ấy về nước khi nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>他下個月回國。</span><br><span style='font-weight: bold; color: #555;'>Tā xià ge yuè huíguó.</span><br>Anh ấy về nước tháng sau.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你們什麼時候放假？</span><br><span style='font-weight: bold; color: #555;'>Nǐmen shénme shíhòu fàngjià?</span><br>Các cậu nghỉ lễ khi nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>我們下個星期放假。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen xià ge xīngqí fàngjià.</span><br>Chúng tôi nghỉ lễ tuần sau.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>她什麼時候來臺湾？</span><br><span style='font-weight: bold; color: #555;'>Tā shénme shíhòu lái Táiwān?</span><br>Cô ấy đến Đài Loan khi nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>她九月三十號來。</span><br><span style='font-weight: bold; color: #555;'>Tā jiǔ yuè sānshí hào lái.</span><br>Cô ấy đến vào ngày 30 tháng 9.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你什麼時候有空？</span><br><span style='font-weight: bold; color: #555;'>Nǐ shénme shíhòu yǒu kòng?</span><br>Cậu rảnh lúc nào?<br>" +
+       "<b>B:</b> <span class='zh-back'>我明天下午有空。</span><br><span style='font-weight: bold; color: #555;'>Wǒ míngtiān xiàwǔ yǒu kòng.</span><br>Chiều mai tôi rảnh.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你學中文多久了？</span><br><span style='font-weight: bold; color: #555;'>Nǐ xué zhōngwén duōjiǔ le?</span><br>Cậu học tiếng Trung bao lâu rồi?<br>" +
+       "<b>B:</b> <span class='zh-back'>我學了一年。</span><br><span style='font-weight: bold; color: #555;'>Wǒ xué le yì nián.</span><br>Tôi học một năm rồi.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>這部電影要看多久？</span><br><span style='font-weight: bold; color: #555;'>Zhè bù diànyǐng yào kàn duōjiǔ?</span><br>Bộ phim này xem mất bao lâu?<br>" +
+       "<b>B:</b> <span class='zh-back'>要看兩個小時。</span><br><span style='font-weight: bold; color: #555;'>Yào kàn liǎng ge xiǎoshí.</span><br>Xem mất hai tiếng đồng hồ.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你們放假放幾天？</span><br><span style='font-weight: bold; color: #555;'>Nǐmen fàngjià fàng jǐ tiān?</span><br>Các cậu được nghỉ mấy ngày?<br>" +
+       "<b>B:</b> <span class='zh-back'>我們放五天。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen fàng wǔ tiān.</span><br>Chúng tôi được nghỉ năm ngày.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你在臺湾待多久？</span><br><span style='font-weight: bold; color: #555;'>Nǐ zài Táiwān dāi duōjiǔ?</span><br>Cậu ở Đài Loan bao lâu?<br>" +
+       "<b>B:</b> <span class='zh-back'>我待三個月。</span><br><span style='font-weight: bold; color: #555;'>Wǒ dāi sān ge yuè.</span><br>Tôi ở ba tháng." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>MỖI NGÀY TÔI LÀM TÁM TIẾNG</div>" +
+       "<div class='zh-front'>我每天<span class='hl-blue'>做八個小時</span></div>" +
+       "<div class='pinyin'>Wǒ měitiān zuò bā ge xiǎoshí</div>" +
+       "<div class='desc'>" +
+       "Khi muốn nói một hành động kéo dài bao lâu, thì đặt thời lượng ngay sau động từ.<br>" +
+       "<b>Động từ + Thời lượng</b>" +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>我去花蓮玩一個星期。</span><br><span style='font-weight: bold; color: #555;'>Wǒ qù Huālián wán yí ge xīngqí.</span><br>Tôi đi Hoa Liên chơi một tuần.<br><br>" +
+       "<span class='zh-back'>這個電影很有意思，可是要看三個小時。</span><br><span style='font-weight: bold; color: #555;'>Zhè ge diànyǐng hěn yǒu yìsi, kěshì yào kàn sān ge xiǎoshí.</span><br>Bộ phim này rất hay, nhưng phải xem ba giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>中文，我想學一年半。</span><br><span style='font-weight: bold; color: #555;'>Zhōngwén, wǒ xiǎng xué yì nián bàn.</span><br>Tiếng Trung, tôi muốn học một năm rưỡi.<br><br>" +
+       "<span class='zh-back'>我去日本旅行一個多星期。</span><br><span style='font-weight: bold; color: #555;'>Wǒ qù Rìběn lǚxíng yí ge duō xīngqí.</span><br>Tôi đi Nhật du lịch hơn một tuần.<br><br>" +
+       "<span class='zh-back'>這麼多甜點，我們要吃一個星期。</span><br><span style='font-weight: bold; color: #555;'>Zhème duō tiándiǎn, wǒmen yào chī yí ge xīngqí.</span><br>Nhiều bánh ngọt thế này, bọn mình phải ăn một tuần mới hết.<br><br>" +
+       "<span class='zh-back'>我想坐高鐵去臺南玩兩天。</span><br><span style='font-weight: bold; color: #555;'>Wǒ xiǎng zuò gāotiě qù Táinán wán liǎng tiān.</span><br>Tôi muốn đi tàu cao tốc xuống Đài Nam chơi hai ngày.<br><br>" +
+       "<span class='zh-back'>中文課，我們學校要上四年。</span><br><span style='font-weight: bold; color: #555;'>Zhōngwén kè, wǒmen xuéxiào yào shàng sì nián.</span><br>Môn tiếng Trung, trường bọn mình học bốn năm.<br><br>" +
+       "<span class='zh-back'>我想在臺灣住一年。</span><br><span style='font-weight: bold; color: #555;'>Wǒ xiǎng zài Táiwān zhù yì nián.</span><br>Tôi muốn ở Đài Loan một năm.<br><br>" +
+       "<span class='zh-back'>他每天運動一個小時。</span><br><span style='font-weight: bold; color: #555;'>Tā měitiān yùndòng yí ge xiǎoshí.</span><br>Anh ấy mỗi ngày tập thể dục một giờ.<br><br>" +
+       "<span class='zh-back'>我們昨天逛夜市逛了兩個小時。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen zuótiān guàng yèshì guàng le liǎng ge xiǎoshí.</span><br>Hôm qua bọn tôi đi chợ đêm hai giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>她打算去日本旅行兩個星期。</span><br><span style='font-weight: bold; color: #555;'>Tā dǎsuàn qù Rìběn lǚxíng liǎng ge xīngqí.</span><br>Cô ấy dự định đi Nhật du lịch hai tuần." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>MỖI NGÀY TÔI LÀM BÀI TẬP MỘT TIẾNG</div>" +
+       "<div class='zh-front'>我每天<span class='hl-blue'>做</span>功課<span class='hl-blue'>做一個小時</span></div>" +
+       "<div class='pinyin'>Wǒ měitiān zuò gōngkè zuò yí ge xiǎoshí</div>" +
+       "<div class='desc'>" +
+       "Khi động từ có tân ngữ, để đảm bảo thời lượng vẫn đi sau động từ, thì lặp lại động từ.<br>" +
+       "<b>Động từ + Tân ngữ + Lặp lại động từ + Thời lượng</b>" +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>他打算教中文教一年。</span><br><span style='font-weight: bold; color: #555;'>Tā dǎsuàn jiāo zhōngwén jiāo yì nián.</span><br>Anh ấy dự định dạy tiếng Trung một năm.<br><br>" +
+       "<span class='zh-back'>我每個星期學書法學兩天。</span><br><span style='font-weight: bold; color: #555;'>Wǒ měi ge xīngqí xué shūfǎ xué liǎng tiān.</span><br>Tôi mỗi tuần học thư pháp hai ngày.<br><br>" +
+       "<span class='zh-back'>今年我想在臺湾學中文學九個月。</span><br><span style='font-weight: bold; color: #555;'>Jīnnián wǒ xiǎng zài Táiwān xué zhōngwén xué jiǔ ge yuè.</span><br>Năm nay tôi muốn ở Đài Loan học tiếng Trung chín tháng.<br><br>" +
+       "<span class='zh-back'>我每天看電視看兩個小時。</span><br><span style='font-weight: bold; color: #555;'>Wǒ měitiān kàn diànshì kàn liǎng ge xiǎoshí.</span><br>Mỗi ngày tôi xem tivi hai giờ.<br><br>" +
+       "<span class='zh-back'>他想學書法學三年。</span><br><span style='font-weight: bold; color: #555;'>Tā xiǎng xué shūfǎ xué sān nián.</span><br>Anh ấy muốn học thư pháp ba năm.<br><br>" +
+       "<span class='zh-back'>我們在茶館喝茶喝了一個下午。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen zài cháguǎn hē chá hē le yí ge xiàwǔ.</span><br>Bọn tôi uống trà ở quán trà cả một buổi chiều.<br><br>" +
+       "<span class='zh-back'>她教英文教了十年。</span><br><span style='font-weight: bold; color: #555;'>Tā jiāo yīngwén jiāo le shí nián.</span><br>Cô ấy dạy tiếng Anh được mười năm.<br><br>" +
+       "<span class='zh-back'>我打算在貓空看風景看半天。</span><br><span style='font-weight: bold; color: #555;'>Wǒ dǎsuàn zài Māokōng kàn fēngjǐng kàn bàn tiān.</span><br>Tôi dự định ngắm phong cảnh ở Miêu Không nửa ngày." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>MỖI NGÀY TÔI LÀM BÀI TẬP MỘT TIẾNG</div>" +
+       "<div class='zh-front'>我每天<span class='hl-blue'>做一個小時的功課</span></div>" +
+       "<div class='pinyin'>Wǒ měitiān zuò yí ge xiǎoshí de gōngkè</div>" +
+       "<div class='desc'>" +
+       "Khi động từ có tân ngữ, mà không muốn lặp lại động từ, thì dùng câu:<br>" +
+       "• <b>Động từ + Thời lượng + (<span class='hl-red'>的</span>) + Tân ngữ (danh từ)</b><br>" +
+       "<span class='hl-blue-text'>我學過三年(的)漢語</span><br>" +
+       "<span style='font-weight: bold; color: #555;'>Wǒ xué guò sān nián (de) hànyǔ</span><br><br>" +
+       "• <b>Động từ + Tân ngữ (đại từ chỉ người) + Thời lượng</b><br>" +
+       "<span class='hl-blue-text'>他們找了你一個上午</span><br>" +
+       "<span style='font-weight: bold; color: #555;'>Tāmen zhǎo le nǐ yí ge shàngwǔ</span><br><br>" +
+       "• Hoặc đưa tân ngữ lên đầu câu:<br>" +
+       "<b>Tân ngữ + Chủ ngữ + Động từ + Thời lượng</b><br>" +
+       "<span class='hl-blue-text'>這個問題他考慮了好幾天</span><br>" +
+       "<span style='font-weight: bold; color: #555;'>Zhège wèntí tā kǎolǜ le hǎojǐ tiān</span>" +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>早上上一個小時的網。</span><br><span style='font-weight: bold; color: #555;'>Zǎoshang shàng yí ge xiǎoshí de wǎng.</span><br>Sáng lên mạng một giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>下午看兩個小時的電視。</span><br><span style='font-weight: bold; color: #555;'>Xiàwǔ kàn liǎng ge xiǎoshí de diànshì.</span><br>Chiều xem tivi hai giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>晚上寫一個小時的功課。</span><br><span style='font-weight: bold; color: #555;'>Wǎnshang xiě yí ge xiǎoshí de gōngkè.</span><br>Tối viết bài tập một giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>我每星期上五天的課。</span><br><span style='font-weight: bold; color: #555;'>Wǒ měi xīngqí shàng wǔ tiān de kè.</span><br>Mỗi tuần tôi học năm ngày.<br><br>" +
+       "<span class='zh-back'>學校下個月放三天的假。</span><br><span style='font-weight: bold; color: #555;'>Xuéxiào xià ge yuè fàng sān tiān de jià.</span><br>Trường tháng sau nghỉ ba ngày.<br><br>" +
+       "<span class='zh-back'>我們打算明天去KTV唱三個小時的歌。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen dǎsuàn míngtiān qù KTV chàng sān ge xiǎoshí de gē.</span><br>Bọn mình dự định ngày mai đi KTV hát ba giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>你決定在臺湾學多久的中文？</span><br><span style='font-weight: bold; color: #555;'>Nǐ juédìng zài Táiwān xué duōjiǔ de zhōngwén?</span><br>Cậu quyết định ở Đài Loan học tiếng Trung bao lâu?<br><br>" +
+       "<span class='zh-back'>我每天上八小時的班。</span><br><span style='font-weight: bold; color: #555;'>Wǒ měitiān shàng bā xiǎoshí de bān.</span><br>Mỗi ngày tôi làm việc tám tiếng.<br><br>" +
+       "<span class='zh-back'>我們唱了三個小時的歌。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen chàng le sān ge xiǎoshí de gē.</span><br>Bọn tôi hát ba giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>學校放兩個月的假。</span><br><span style='font-weight: bold; color: #555;'>Xuéxiào fàng liǎng ge yuè de jià.</span><br>Trường nghỉ hai tháng.<br><br>" +
+       "<span class='zh-back'>他每次睡覺睡八個小時。</span><br><span style='font-weight: bold; color: #555;'>Tā měi cì shuìjiào shuì bā ge xiǎoshí.</span><br>Mỗi lần anh ấy ngủ tám tiếng.<br><br>" +
+       "<span class='zh-back'>我們聊了一個小時的天。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen liáo le yí ge xiǎoshí de tiān.</span><br>Bọn tôi tán gẫu một giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>我看了三個鐘頭的電視。</span><br><span style='font-weight: bold; color: #555;'>Wǒ kàn le sān ge zhōngtóu de diànshì.</span><br>Tôi xem tivi ba giờ đồng hồ.<br><br>" +
+       "<span class='zh-back'>他學了兩年的英文。</span><br><span style='font-weight: bold; color: #555;'>Tā xué le liǎng nián de yīngwén.</span><br>Anh ấy học tiếng Anh hai năm.<br><br>" +
+       "<span class='zh-back'>我們逛了一個晚上的夜市。</span><br><span style='font-weight: bold; color: #555;'>Wǒmen guàng le yí ge wǎnshang de yèshì.</span><br>Bọn tôi đi chợ đêm cả một buổi tối.<br><br>" +
+       "<span class='zh-back'>她喝了一個下午的茶。</span><br><span style='font-weight: bold; color: #555;'>Tā hē le yí ge xiàwǔ de chá.</span><br>Cô ấy uống trà cả một buổi chiều.<br><br>" +
+       "<span class='zh-back'>這個夜市，我們逛了一個晚上。</span><br><span style='font-weight: bold; color: #555;'>Zhè ge yèshì, wǒmen guàng le yí ge wǎnshang.</span><br>Cái chợ đêm này, bọn tôi đi cả một buổi tối.<br><br>" +
+       "<span class='zh-back'>貓空的茶，她喝了一下午。</span><br><span style='font-weight: bold; color: #555;'>Māokōng de chá, tā hē le yí xiàwǔ.</span><br>Trà Miêu Không, cô ấy uống cả một buổi chiều.<br><br>" +
+       "<span class='zh-back'>臺東，我們去了三天。</span><br><span style='font-weight: bold; color: #555;'>Táidōng, wǒmen qù le sān tiān.</span><br>Đài Đông, bọn tôi đi ba ngày.<br><br>" +
+       "<span class='zh-back'>貓空，他們去過兩次了。</span><br><span style='font-weight: bold; color: #555;'>Māokōng, tāmen qù guò liǎng cì le.</span><br>Mão Không, họ đi hai lần rồi." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>TÔI ĐÃ BA NGÀY KHÔNG NGỦ RỒI</div>" +
+       "<div class='zh-front'>他三天<span class='hl-blue'>沒</span>睡覺了</div>" +
+       "<div class='pinyin'>Tā sāntiān méi shuìjiào le</div>" +
+       "<div class='desc'>" +
+       "Khi có từ phủ định (<span class='hl-red'>不</span> / <span class='hl-red'>没</span>) thì trật tự là:<br>" +
+       "<b>Thời lượng + <span class='hl-red'>不</span> / <span class='hl-red'>没</span> + Động từ</b>" +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>他太忙了，所以他兩天不能來上課。</span><br><span style='font-weight: bold; color: #555;'>Tā tài máng le, suǒyǐ tā liǎng tiān bù néng lái shàngkè.</span><br>Anh ấy bận quá, nên hai ngày nay không thể lên lớp được.<br><br>" +
+       "<span class='zh-back'>這裡没有網路，所以我兩個星期不能上網。</span><br><span style='font-weight: bold; color: #555;'>Zhèlǐ méiyǒu wǎngluò, suǒyǐ wǒ liǎng ge xīngqí bù néng shàngwǎng.</span><br>Ở đây không có mạng, nên tôi hai tuần không lên mạng được.<br><br>" +
+       "<span class='zh-back'>她要回美國，所以一個月不能上課。</span><br><span style='font-weight: bold; color: #555;'>Tā yào huí Měiguó, suǒyǐ yí ge yuè bù néng shàngkè.</span><br>Cô ấy sắp về Mỹ, nên một tháng không thể lên lớp.<br><br>" +
+       "<span class='zh-back'>他三天沒睡覺了。</span><br><span style='font-weight: bold; color: #555;'>Tā sāntiān méi shuìjiào le.</span><br>Anh ấy ba ngày không ngủ rồi.<br><br>" +
+       "<span class='zh-back'>我兩個星期沒去夜市了。</span><br><span style='font-weight: bold; color: #555;'>Wǒ liǎng ge xīngqí méi qù yèshì le.</span><br>Tôi hai tuần không đi chợ đêm rồi.<br><br>" +
+       "<span class='zh-back'>她一個月沒喝咖啡了。</span><br><span style='font-weight: bold; color: #555;'>Tā yí ge yuè méi hē kāfēi le.</span><br>Cô ấy một tháng không uống cà phê rồi.<br><br>" +
+       "<span class='zh-back'>他們五天不能上網。</span><br><span style='font-weight: bold; color: #555;'>Tāmen wǔ tiān bù néng shàngwǎng.</span><br>Họ năm ngày không lên mạng được.<br><br>" +
+       "<span class='zh-back'>我一年沒回國了。</span><br><span style='font-weight: bold; color: #555;'>Wǒ yì nián méi huíguó le.</span><br>Tôi một năm không về nước rồi." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>KHI NGHỈ LỄ, TÔI THÍCH ĐI CHỢ ĐÊM</div>" +
+       "<div class='zh-front'>放假<span class='hl-blue'>的時候</span>，我喜欢去逛夜市</div>" +
+       "<div class='pinyin'>Fàngjià de shíhòu, wǒ xǐhuan qù guàng yèshì.</div>" +
+       "<div class='desc'>" +
+       "Dùng để nói một mốc nào đó.<br>" +
+       "<b>Sự việc A</b> + <span class='hl-red'>的時候</span> + <b>Sự việc B</b>" +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>在山上看风景的时候，我觉得很舒服。</span><br><span style='font-weight: bold; color: #555;'>Zài shān shàng kàn fēngjǐng de shíhòu, wǒ juéde hěn shūfú.</span><br>Khi ngắm phong cảnh trên núi, tôi thấy rất thoải mái.<br><br>" +
+       "<span class='zh-back'>你有空的时候，请到我家来玩。</span><br><span style='font-weight: bold; color: #555;'>Nǐ yǒu kòng de shíhòu, qǐng dào wǒ jiā lái wán.</span><br>Khi cậu rảnh, mời cậu qua nhà tôi chơi.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>有空的时候，你喜欢做什么？</span><br><span style='font-weight: bold; color: #555;'>Yǒu kòng de shíhòu, nǐ xǐhuan zuò shénme?</span><br>Khi rảnh rỗi, bạn thích làm gì?<br><b>B:</b> <span class='zh-back'>有空的时候，我喜欢跟朋友一起去看电影。</span><br><span style='font-weight: bold; color: #555;'>Yǒu kòng de shíhòu, nǐ xǐhuan gēn péngyou yìqǐ qù kàn diànyǐng.</span><br>Khi rảnh, tôi thích đi xem phim với bạn.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>放假的时候，你要做什么？</span><br><span style='font-weight: bold; color: #555;'>Fàngjià de shíhòu, nǐ yào zuò shénme?</span><br>Khi nghỉ lễ, bạn muốn làm gì?<br><b>B:</b> <span class='zh-back'>放假的时候，我要去旅行。</span><br><span style='font-weight: bold; color: #555;'>Fàngjià de shíhòu, nǐ yào qù lǚxíng.</span><br>Khi nghỉ lễ, tôi sẽ đi du lịch.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>不上课的时候，你想做什么？</span><br><span style='font-weight: bold; color: #555;'>Bú shàngkè de shíhòu, nǐ xiǎng zuò shénme?</span><br>Khi không lên lớp, bạn muốn làm gì?<br><b>B:</b> <span class='zh-back'>不上课的时候，我想在家休息。</span><br><span style='font-weight: bold; color: #555;'>Bú shàngkè de shíhòu, nǐ xiǎng zài jiā xiūxī.</span><br>Khi không học, tôi muốn ở nhà nghỉ ngơi.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>周末的时候，你常做什么？</span><br><span style='font-weight: bold; color: #555;'>Zhōumò de shíhòu, nǐ cháng zuò shénme?</span><br>Vào cuối tuần, bạn thường làm gì?<br><b>B:</b> <span class='zh-back'>周末的时候，我常去逛夜市。</span><br><span style='font-weight: bold; color: #555;'>Zhōumò de shíhòu, wǒ cháng qù guàng yèshì.</span><br>Cuối tuần, tôi thường đi chợ đêm." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>LÚC THÌ TÔI LÊN MẠNG LÚC THÌ TÔI ĐỌC SÁCH</div>" +
+       "<div class='zh-front'><span class='hl-blue'>有時候</span>看書，<span class='hl-blue'>有時候</span>上網</div>" +
+       "<div class='pinyin'>Yǒu shíhòu kànshū, yǒu shíhòu shàngwǎng</div>" +
+       "<div class='desc'>" +
+       "Dùng để nói về hai khả năng luân phiên xảy ra trong cùng một tình huống. <br>Giống như có lúc thì thế này, có lúc thì thế khác." +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>我有時候吃中國菜，有時候吃越南菜。</span><br><span style='font-weight: bold; color: #555;'>Wǒ yǒu shíhòu chī Zhguó cài, yǒu shíhòu chī Yuènán cài.</span><br>Tôi có lúc ăn món Trung Quốc, có lúc ăn món Việt Nam.<br><br>" +
+       "<span class='zh-back'>在圖書館的時候，我有時候看書，有時候上網。</span><br><span style='font-weight: bold; color: #555;'>Zài túshūguǎn de shíhòu, wǒ yǒu shíhòu kànshū, yǒu shíhòu shàngwǎng.</span><br>Khi ở thư viện, tôi có lúc đọc sách, có lúc lên mạng.<br><br>" +
+       "<span class='zh-back'>放假的時候，我有時候在家寫功課，有時候出去玩。</span><br><span style='font-weight: bold; color: #555;'>Fàngjià de shíhòu, wǒ yǒu shíhòu zài jiā xiě gōngkè, yǒu shíhòu chūqù wán.</span><br>Khi nghỉ lễ, tôi có lúc ở nhà viết bài, có lúc ra ngoài chơi.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>在家的時候，你做什麼？</span><br><span style='font-weight: bold; color: #555;'>Zài jiā de shíhòu, nǐ zuò shénme?</span><br>Khi ở nhà, bạn làm gì?<br><b>B:</b> <span class='zh-back'>有時候寫功課，有時候看電視。</span><br><span style='font-weight: bold; color: #555;'>Yǒu shíhòu xiě gōngkè, yǒu shíhòu kàn diànshì.</span><br>Có lúc viết bài tập, có lúc xem tivi.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>周末的時候，你做什麼？</span><br><span style='font-weight: bold; color: #555;'>Zhōumò de shíhòu, nǐ zuò shénme?</span><br>Vào cuối tuần, bạn làm gì?<br><b>B:</b> <span class='zh-back'>有時候去公园，有時候去逛街。</span><br><span style='font-weight: bold; color: #555;'>Yǒu shíhòu qù gōngyuán, yǒu shíhòu qù guàngjiē.</span><br>Có lúc đi công viên, có lúc đi dạo phố.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>有空的時候，你做什麼？</span><br><span style='font-weight: bold; color: #555;'>Yǒu kòng de shíhòu, nǐ zuò shénme?</span><br>Khi rảnh rỗi, bạn làm gì?<br><b>B:</b> <span class='zh-back'>有時候看書，有時候听音乐。</span><br><span style='font-weight: bold; color: #555;'>Yǒu shíhòu kànshū, yǒu shíhòu tīng yīnyuè.</span><br>Có lúc đọc sách, có lúc nghe nhạc.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>放假的時候，你做什麼？</span><br><span style='font-weight: bold; color: #555;'>Fàngjià de shíhòu, nǐ zuò shénme?</span><br>Khi nghỉ lễ, bạn làm gì?<br><b>B:</b> <span class='zh-back'>有時候去旅行，有時候在家休息。</span><br><span style='font-weight: bold; color: #555;'>Yǒu shíhòu qù lǚxíng, yǒu shíhòu zài jiā xiūxī.</span><br>Có lúc đi du lịch, có lúc ở nhà nghỉ ngơi.<br><br>" +
+       "<b>A:</b> 在 <span class='zh-back'>cāntīng</span>吃飯的時候，你吃什麼？<br><span style='font-weight: bold; color: #555;'>Zài cāntīng chīfàn de shíhòu, nǐ chī shénme?</span><br>Khi ăn cơm ở nhà hàng, bạn ăn gì?<br><b>B:</b> <span class='zh-back'>有時候吃飯，有時候吃面。</span><br><span style='font-weight: bold; color: #555;'>Yǒu shíhòu chīfàn, yǒu shíhòu chī miàn.</span><br>Có lúc ăn cơm, có lúc ăn mì." +
+       "</div>"
+  },
+  {
+    f: "<div class='zh-front'>NẾU CÓ TIỀN, TÔI SẼ MUA NHÀ TO</div>" +
+       "<div class='zh-front'><span class='hl-blue'>要是</span>我有钱，我<span class='hl-blue'>就</span>買大房子</div>" +
+       "<div class='pinyin'>Yào shì wǒ yǒu qián, wǒ jiù mǎi dà fángzi</div>" +
+       "<div class='desc'>" +
+       "Đây là cách nói điều kiện – kết quả.<br>" +
+       "• <span class='hl-red'>要是</span> (nếu) đứng ở vế câu điều kiện, <span class='hl-red'>就</span> (thì) đứng ở vế câu kết quả.<br>" +
+       "• 要是 có thể đặt trước hoặc sau chủ ngữ của vế điều kiện.<br>" +
+       "• 就 đặt ngay trước vị ngữ của vế kết quả." +
+       "</div>",
+    b: "<div class='desc'>" +
+       "<span class='zh-back'>我要是不回國，我就跟你們一起去玩。</span><br><span style='font-weight: bold; color: #555;'>Wǒ yào shì bù huíguó, wǒ jiù gēn nǐmen yìqǐ qù wán.</span><br>Nếu tôi không về nước, tôi sẽ đi chơi cùng các cậu.<br><br>" +
+       "<span class='zh-back'>要是我有空，我就跟朋友一起去KTV唱歌。</span><br><span style='font-weight: bold; color: #555;'>Yào shì wǒ yǒu kòng, wǒ jiù gēn péngyou yìqǐ qù KTV chànggē.</span><br>Nếu tôi rảnh, tôi sẽ đi hát karaoke với bạn.<br><br>" +
+       "<span class='zh-back'>你要是星期日有空，你就跟我去旅行吧！</span><br><span style='font-weight: bold; color: #555;'>Nǐ yào shì xīngqírì yǒu kòng, nǐ jiù gēn wǒ qù lǚxíng ba!</span><br>Nếu cậu rảnh Chủ nhật, cậu đi du lịch với tôi đi!<br><br>" +
+       "<span class='zh-back'>要是下個月不忙，她就回國。</span><br><span style='font-weight: bold; color: #555;'>Yào shì xià ge yuè bù máng, tā jiù huíguó.</span><br>Nếu tháng sau không bận, cô ấy sẽ về nước.<br><br>" +
+       "<span class='zh-back'>你要是没空，我們就不要去逛夜市。</span><br><span style='font-weight: bold; color: #555;'>Nǐ yào shì méi kòng, wǒmen jiù bú yào qù guàng yèshì.</span><br>Nếu cậu không rảnh, bọn mình đừng đi chợ đêm nữa.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>明天去看電影吗？</span><br><span style='font-weight: bold; color: #555;'>Míngtiān qù kàn diànyǐng ma?</span><br>Ngày mai đi xem phim không?<br><b>B:</b> <span class='zh-back'>要是我有空，我就去看電影。</span><br><span style='font-weight: bold; color: #555;'>Yào shì wǒ yǒu kòng, wǒ jiù qù kàn diànyǐng.</span><br>Nếu tôi rảnh, tôi sẽ đi xem phim.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>這個周末，你要來我家吗？</span><br><span style='font-weight: bold; color: #555;'>Zhè ge zhōumò, nǐ yào lái wǒ jiā ma?</span><br>Cuối tuần này, bạn muốn đến nhà tôi không?<br><b>B:</b> <span class='zh-back'>要是這個周末不忙，我就去你家。</span><br><span style='font-weight: bold; color: #555;'>Yào shì zhè ge zhōumò bù máng, wǒ jiù qù nǐ jiā.</span><br>Nếu cuối tuần này không bận, tôi sẽ đến nhà bạn.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>星期六你要跟我去看篮球比賽吗？</span><br><span style='font-weight: bold; color: #555;'>Xīngqíliù nǐ yào gēn wǒ qù kàn lánqiú bǐsài ma?</span><br>Thứ Bảy bạn có muốn đi xem đấu bóng rổ với tôi không?<br><b>B:</b> <span class='zh-back'>要是星期六没事，我就跟你去看。</span><br><span style='font-weight: bold; color: #555;'>Yào shì xīngqíliù méi shì, wǒ jiù gēn nǐ qù kàn.</span><br>Nếu thứ Bảy không có việc gì, tôi sẽ đi xem cùng bạn.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>今天下課，你去不去圖書館看書？</span><br><span style='font-weight: bold; color: #555;'>Jīntiān xiàkè, nǐ qù bú qù túshūguǎn kànshū?</span><br>Tan học hôm nay, bạn có đi thư viện đọc sách không?<br><b>B:</b> <span class='zh-back'>要是今天下課不累，我就去圖書館。</span><br><span style='font-weight: bold; color: #555;'>Yào shì jīntiān xiàkè bú lèi, wǒ jiù qù túshūguǎn.</span><br>Nếu tan học hôm nay không mệt, tôi sẽ đi thư viện.<br><br>" +
+       "<b>A:</b> <span class='zh-back'>你想去猫空喝茶吗？</span><br><span style='font-weight: bold; color: #555;'>Nǐ xiǎng qù Māokōng hē chá ma?</span><br>Bạn có muốn đi Miêu Không uống trà không?<br><b>B:</b> <span class='zh-back'>要是天气好，我就去猫空喝茶。</span><br><span style='font-weight: bold; color: #555;'>Yào shì tiānqì hǎo, wǒ jiù qù Māokōng hē chá.</span><br>Nếu thời tiết đẹp, tôi sẽ đi Miêu Không uống trà." +
+       "</div>"
+  }
+];
+
+let idx = 0;
+function render() {
+  document.getElementById('frontFace').innerHTML = cards[idx].f;
+  document.getElementById('backFace').innerHTML = cards[idx].b;
+  document.getElementById('progress').innerText = `Thẻ ${idx + 1} / ${cards.length}`;
+}
+function flipCard() { document.getElementById('card').classList.toggle('flipped'); }
+function nextCard() { idx = (idx + 1) % cards.length; document.getElementById('card').classList.remove('flipped'); render(); }
+function prevCard() { idx = (idx - 1 + cards.length) % cards.length; document.getElementById('card').classList.remove('flipped'); render(); }
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'ArrowRight') {
+    nextCard();
+  } else if (event.key === 'ArrowLeft') {
+    prevCard();
+  } else if (event.key === ' ' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    event.preventDefault();
+    flipCard();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
